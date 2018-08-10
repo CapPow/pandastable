@@ -313,6 +313,12 @@ class Table(Canvas):
         #w, h = self.winfo_width(), self.winfo_height()
         #if w <= 1.0 or h <= 1.0:
         w, h = self.master.winfo_width(), self.master.winfo_height()
+        # account for additional frames occupying otherwise visible tablespace.
+        if hasattr(self, 'searchframe') and self.searchframe != None:
+            h = h - self.searchframe.winfo_height()
+        if hasattr(self, 'statusbar') and self.statusbar != None:
+            h = h - self.statusbar.winfo_height()
+        # we could also accont for the horizontal toolbar's width here
         x2, y2 = self.canvasx(w), self.canvasy(h)
         return x1, y1, x2, y2
 
@@ -357,6 +363,32 @@ class Table(Canvas):
         if end > self.cols:
             end = self.cols
         return start, end
+
+    def set_table_view(self):
+        ''' makes sure the currentcol and currentrow are in view'''
+        x,y = self.getCanvasPos(self.currentrow, self.currentcol)
+        rmin = self.visiblerows[0]
+        rmax = self.visiblerows[-1] - 2
+        cmin = self.visiblecols[0] + 1
+        cmax = self.visiblecols[-1] - 1
+        
+        if self.currentcol > cmax or self.currentcol <= cmin:
+            # print (self.currentcol, self.visiblecols)
+            self.xview('moveto', x)
+            self.tablecolheader.xview('moveto', x)
+
+        if self.currentrow <= rmin:
+            # we need to shift y to page up enough
+            vh=len(self.visiblerows)/2
+            x,y = self.getCanvasPos(self.currentrow-vh,  self.currentcol)
+
+        if self.currentrow >= rmax or self.currentrow <= rmin:
+            self.yview('moveto', y)
+            self.rowheader.yview('moveto', y)
+
+        self.drawSelectedRect(self.currentrow, self.currentcol)
+        self.redraw()
+        return
 
     def redrawVisible(self, event=None, callback=None):
         """Redraw the visible portion of the canvas. This is the core redraw
@@ -2196,22 +2228,9 @@ class Table(Canvas):
                 x,y = self.getCanvasPos(self.currentrow, self.currentcol -1 )
                 self.currentcol  = self.currentcol -1
 
-        if self.currentcol > cmax or self.currentcol <= cmin:
-            # print (self.currentcol, self.visiblecols)
-            self.xview('moveto', x)
-            self.tablecolheader.xview('moveto', x)
+        # moved the table view logic into function to share with "dialogs.FindReplaceDialog.find()"
+        self.set_table_view()
 
-        if self.currentrow <= rmin:
-            # we need to shift y to page up enough
-            vh=len(self.visiblerows)/2
-            x,y = self.getCanvasPos(self.currentrow-vh,  self.currentcol)
-
-        if self.currentrow >= rmax or self.currentrow <= rmin:
-            self.yview('moveto', y)
-            self.rowheader.yview('moveto', y)
-
-        self.drawSelectedRect(self.currentrow, self.currentcol)
-        self.redraw()
         return
 
     def handle_double_click(self, event):

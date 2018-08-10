@@ -788,7 +788,10 @@ class DataExplore(Frame):
     def findText(self):
 
         table = self.getCurrentTable()
-        table.findText()
+        if hasattr(table, 'searchframe') and table.searchframe != None:
+            table.searchframe.close()
+        else:
+            table.findText()
         return
 
     def concat(self):
